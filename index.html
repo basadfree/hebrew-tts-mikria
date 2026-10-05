@@ -2,90 +2,159 @@
 <html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>מקריא טקסט בעברית איכותית</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; }
-        textarea { width: 100%; height: 150px; margin-bottom: 10px; font-size: 16px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; }
-        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; }
+        body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; text-align: center; }
+        textarea { width: 100%; max-width: 600px; height: 150px; margin: 0 auto 15px; font-size: 16px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; display: block; font-family: inherit; }
+        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold; margin: 0 4px; }
         button:hover { background: #005a9e; }
-        select { padding: 10px; font-size: 16px; margin-right: 10px; background: #333; color: #fff; border: 1px solid #555; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        .status { margin-top: 12px; color: #aaa; font-size: 14px; }
+        .row { margin-top: 10px; }
+        input[type=range] { width: 140px; vertical-align: middle; }
+        .hint { margin-top: 18px; color: #777; font-size: 13px; }
     </style>
 </head>
 <body>
 
-    <h2>הקראת טקסט בעברית בקול טבעי (בחינם וללא הגבלה)</h2>
-    
-    <textarea id="textInput">שלום! זהו קול טבעי ואנושי בעברית. אם תפתח את הקובץ הזה בדפדפן אדג', תוכל לשמוע אותי מדבר בצורה יפה מאוד וללא המגבלות של הקול הרובוטי הישן.</textarea>
-    <br>
-    
-    <button onclick="speak()">הקרא טקסט</button>
-    
-    <!-- תיבת בחירה שתתמלא אוטומטית בקולות הזמינים במכשיר -->
-    <select id="voiceSelect"></select>
+    <h2>הקראת טקסט בעברית בקול טבעי (ללא הגבלה)</h2>
+
+    <textarea id="textInput">שלום! הקוד הנוכחי משתמש כעת במנוע השמע הרשמי והאיכותי של גוגל. בצורה הזו, הקול יישמע טבעי וברור לחלוטין בכל דפדפן, ללא תלות בקול הרובוטי הישן של המחשב.</textarea>
+
+    <div class="row">
+        <button id="playBtn" onclick="toggleSpeak()">הקרא טקסט בקול טבעי</button>
+        <button id="stopBtn" onclick="stopSpeak()">עצור</button>
+    </div>
+
+    <div class="row">
+        <label>מהירות: <span id="speedLabel">1.0</span></label><br>
+        <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1" value="1" oninput="document.getElementById('speedLabel').textContent = parseFloat(this.value).toFixed(1)">
+    </div>
+
+    <div id="statusLabel" class="status"></div>
+
+    <div class="hint">ההקראה מבוצעת ממנוע השמע של Google Translate — נדרש חיבור לאינטרנט.</div>
+
+    <audio id="audioPlayer" style="display:none;"></audio>
 
     <script>
-        const synth = window.speechSynthesis;
-        const voiceSelect = document.getElementById('voiceSelect');
-        const textInput = document.getElementById('textInput');
-        let voices = [];
+        const MAX_CHARS = 190;
+        const audioPlayer = document.getElementById('audioPlayer');
+        const statusLabel = document.getElementById('statusLabel');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
 
-        function populateVoiceList() {
-            // קבלת כל הקולות הנתמכים בדפדפן הנוכחי
-            voices = synth.getVoices();
-            voiceSelect.innerHTML = '';
+        let chunks = [];
+        let currentIndex = 0;
+        let isPlaying = false;
 
-            // סינון והצגה של קולות בעברית בלבד (he)
-            const hebrewVoices = voices.filter(voice => voice.lang.includes('he') || voice.lang.includes('HE'));
+        function splitText(text) {
+            text = text.replace(/\s+/g, ' ').trim();
+            if (text.length <= MAX_CHARS) return [text];
 
-            if (hebrewVoices.length === 0) {
-                const option = document.createElement('option');
-                option.textContent = 'לא נמצאו קולות בעברית';
-                voiceSelect.appendChild(option);
+            const parts = text.split(/(?<=[.!?։؟…])\s+/);
+            const result = [];
+            let buffer = '';
+
+            for (const part of parts) {
+                if ((buffer + ' ' + part).trim().length <= MAX_CHARS) {
+                    buffer = (buffer ? buffer + ' ' : '') + part;
+                    continue;
+                }
+                if (buffer) result.push(buffer);
+                if (part.length <= MAX_CHARS) {
+                    buffer = part;
+                } else {
+                    const words = part.split(' ');
+                    buffer = '';
+                    for (const word of words) {
+                        if ((buffer ? buffer + ' ' : '') + word > MAX_CHARS) {
+                            if (buffer) result.push(buffer);
+                            buffer = word;
+                        } else {
+                            buffer = (buffer ? buffer + ' ' : '') + word;
+                        }
+                    }
+                }
+            }
+            if (buffer) result.push(buffer);
+            return result;
+        }
+
+        function buildUrl(text) {
+            const speed = parseFloat(document.getElementById('speedRange').value).toFixed(1);
+            return 'https://translate.google.com/translate_tts'
+                + '?ie=UTF-8'
+                + '&client=tw-ob'
+                + '&tl=iw'
+                + '&ttsspeed=' + speed
+                + '&q=' + encodeURIComponent(text);
+        }
+
+        function playCurrentChunk() {
+            if (!isPlaying) return;
+            if (currentIndex >= chunks.length) {
+                isPlaying = false;
+                playBtn.textContent = 'הקרא טקסט בקול טבעי';
+                statusLabel.textContent = 'ההקראה הסתיימה.';
                 return;
             }
 
-            hebrewVoices.forEach(voice => {
-                const option = document.createElement('option');
-                option.textContent = `${voice.name} (${voice.lang})`;
-                option.value = voice.name;
+            const isLast = currentIndex === chunks.length - 1;
+            statusLabel.textContent = 'מנגן... (' + (currentIndex + 1) + '/' + chunks.length + ')';
 
-                // הגדרת הקול הטבעי של מיקרוסופט כברירת מחדל אוטומטית אם הוא נמצא
-                if (voice.name.includes('Online') || voice.name.includes('Natural')) {
-                    option.selected = true;
+            audioPlayer.onended = function () {
+                if (!isPlaying) return;
+                if (isLast) {
+                    isPlaying = false;
+                    playBtn.textContent = 'הקרא טקסט בקול טבעי';
+                    statusLabel.textContent = 'ההקראה הסתיימה.';
+                } else {
+                    currentIndex++;
+                    playCurrentChunk();
                 }
-                
-                voiceSelect.appendChild(option);
+            };
+
+            audioPlayer.onerror = function () {
+                isPlaying = false;
+                playBtn.textContent = 'הקרא טקסט בקול טבעי';
+                statusLabel.textContent = 'שגיאה בניגון השמע. נסה שוב.';
+            };
+
+            audioPlayer.src = buildUrl(chunks[currentIndex]);
+            const p = audioPlayer.play();
+            if (p && p.catch) p.catch(() => {
+                isPlaying = false;
+                playBtn.textContent = 'הקרא טקסט בקול טבעי';
+                statusLabel.textContent = 'שגיאה בניגון השמע. נסה שוב.';
             });
         }
 
-        // אירוע שנדרש מכיוון שטעינת הקולות בדפדפנים מתבצעת בצורה אסינכרונית
-        populateVoiceList();
-        if (speechSynthesis.onvoiceschanged !== undefined) {
-            speechSynthesis.onvoiceschanged = populateVoiceList;
+        function toggleSpeak() {
+            if (isPlaying) { stopSpeak(); return; }
+
+            const text = document.getElementById('textInput').value.trim();
+            if (!text) {
+                alert('אנא הכנס טקסט להקראה');
+                return;
+            }
+
+            chunks = splitText(text);
+            currentIndex = 0;
+            isPlaying = true;
+            playBtn.textContent = 'עצור';
+            statusLabel.textContent = 'מכין את השמע...';
+            playCurrentChunk();
         }
 
-        function speak() {
-            if (synth.speaking) {
-                synth.cancel(); // עצירת הקראה קודמת אם היא באמצע
-            }
-
-            if (textInput.value !== '') {
-                const utterThis = new SpeechSynthesisUtterance(textInput.value);
-                
-                // מציאת הקול שנבחר בתיבת הבחירה
-                const selectedVoiceName = voiceSelect.value;
-                const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
-                
-                if (selectedVoice) {
-                    utterThis.voice = selectedVoice;
-                }
-
-                // הגדרות מהירות וטון (תוכל לשנות כאן למהירות שאתה אוהב)
-                utterThis.rate = 1.0; 
-                utterThis.pitch = 1.0;
-
-                synth.speak(utterThis);
-            }
+        function stopSpeak() {
+            isPlaying = false;
+            audioPlayer.pause();
+            audioPlayer.removeAttribute('src');
+            audioPlayer.load();
+            playBtn.textContent = 'הקרא טקסט בקול טבעי';
+            statusLabel.textContent = 'ההקראה הופסקה.';
         }
     </script>
 </body>
