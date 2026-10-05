@@ -84,16 +84,21 @@
             return result;
         }
 
-        const CLIENTS = ['gwt-client', 'tw-ob', 'dict-chrome-ex'];
+        const CLIENTS = ['gtx', 'tw-ob', 'dict-chrome-ex', 'gtx-full', 'gwt-client'];
 
         function buildUrl(text, client) {
             const speed = parseFloat(document.getElementById('speedRange').value).toFixed(1);
-            return 'https://translate.google.com/translate_tts'
+            const base = 'https://translate.google.com/translate_tts'
                 + '?ie=UTF-8'
-                + '&client=' + client
                 + '&tl=iw'
-                + '&ttsspeed=' + speed
-                + '&q=' + encodeURIComponent(text);
+                + '&q=' + encodeURIComponent(text)
+                + '&ttsspeed=' + speed;
+            if (client === 'gtx-full') return base + '&client=gtx&total=1&idx=0&textlen=' + text.length;
+            return base + '&client=' + client;
+        }
+
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
         }
 
         function resetBtn() {
@@ -118,14 +123,23 @@
         async function fetchAudio(text) {
             let lastErr = null;
             for (const client of CLIENTS) {
-                try {
-                    const res = await fetch(buildUrl(text, client), { referrerPolicy: 'no-referrer' });
-                    if (!res.ok) { lastErr = new Error('HTTP ' + res.status); continue; }
-                    const buf = await res.arrayBuffer();
-                    if (buf.byteLength > 0) return buf;
-                    lastErr = new Error('תשובה ריקה');
-                } catch (e) {
-                    lastErr = e;
+                for (let attempt = 0; attempt < 2; attempt++) {
+                    try {
+                        const res = await fetch(buildUrl(text, client), { referrerPolicy: 'no-referrer' });
+                        if (res.status === 429) {
+                            lastErr = new Error('rate limited (429)');
+                            await delay(1200 + attempt * 1500);
+                            continue;
+                        }
+                        if (!res.ok) { lastErr = new Error('HTTP ' + res.status); break; }
+                        const buf = await res.arrayBuffer();
+                        if (buf.byteLength > 0) return buf;
+                        lastErr = new Error('תשובה ריקה');
+                        break;
+                    } catch (e) {
+                        lastErr = e;
+                        await delay(800);
+                    }
                 }
             }
             throw lastErr || new Error('בקשה נכשלה');
