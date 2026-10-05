@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>מקריא טקסט בעברית איכותית</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; }
+        textarea { width: 100%; height: 150px; margin-bottom: 10px; font-size: 16px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; }
+        button { padding: 10px 20px; font-size: 16px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; }
+        button:hover { background: #005a9e; }
+        select { padding: 10px; font-size: 16px; margin-right: 10px; background: #333; color: #fff; border: 1px solid #555; }
+    </style>
+</head>
+<body>
+
+    <h2>הקראת טקסט בעברית בקול טבעי (בחינם וללא הגבלה)</h2>
+    
+    <textarea id="textInput">שלום! זהו קול טבעי ואנושי בעברית. אם תפתח את הקובץ הזה בדפדפן אדג', תוכל לשמוע אותי מדבר בצורה יפה מאוד וללא המגבלות של הקול הרובוטי הישן.</textarea>
+    <br>
+    
+    <button onclick="speak()">הקרא טקסט</button>
+    
+    <!-- תיבת בחירה שתתמלא אוטומטית בקולות הזמינים במכשיר -->
+    <select id="voiceSelect"></select>
+
+    <script>
+        const synth = window.speechSynthesis;
+        const voiceSelect = document.getElementById('voiceSelect');
+        const textInput = document.getElementById('textInput');
+        let voices = [];
+
+        function populateVoiceList() {
+            // קבלת כל הקולות הנתמכים בדפדפן הנוכחי
+            voices = synth.getVoices();
+            voiceSelect.innerHTML = '';
+
+            // סינון והצגה של קולות בעברית בלבד (he)
+            const hebrewVoices = voices.filter(voice => voice.lang.includes('he') || voice.lang.includes('HE'));
+
+            if (hebrewVoices.length === 0) {
+                const option = document.createElement('option');
+                option.textContent = 'לא נמצאו קולות בעברית';
+                voiceSelect.appendChild(option);
+                return;
+            }
+
+            hebrewVoices.forEach(voice => {
+                const option = document.createElement('option');
+                option.textContent = `${voice.name} (${voice.lang})`;
+                option.value = voice.name;
+
+                // הגדרת הקול הטבעי של מיקרוסופט כברירת מחדל אוטומטית אם הוא נמצא
+                if (voice.name.includes('Online') || voice.name.includes('Natural')) {
+                    option.selected = true;
+                }
+                
+                voiceSelect.appendChild(option);
+            });
+        }
+
+        // אירוע שנדרש מכיוון שטעינת הקולות בדפדפנים מתבצעת בצורה אסינכרונית
+        populateVoiceList();
+        if (speechSynthesis.onvoiceschanged !== undefined) {
+            speechSynthesis.onvoiceschanged = populateVoiceList;
+        }
+
+        function speak() {
+            if (synth.speaking) {
+                synth.cancel(); // עצירת הקראה קודמת אם היא באמצע
+            }
+
+            if (textInput.value !== '') {
+                const utterThis = new SpeechSynthesisUtterance(textInput.value);
+                
+                // מציאת הקול שנבחר בתיבת הבחירה
+                const selectedVoiceName = voiceSelect.value;
+                const selectedVoice = voices.find(voice => voice.name === selectedVoiceName);
+                
+                if (selectedVoice) {
+                    utterThis.voice = selectedVoice;
+                }
+
+                // הגדרות מהירות וטון (תוכל לשנות כאן למהירות שאתה אוהב)
+                utterThis.rate = 1.0; 
+                utterThis.pitch = 1.0;
+
+                synth.speak(utterThis);
+            }
+        }
+    </script>
+</body>
+</html>
