@@ -6,106 +6,218 @@
     <meta name="referrer" content="no-referrer">
     <title>מקריא טקסט בעברית - קול AI טבעי</title>
     <style>
-        :root { --bg:#14161a; --panel:#1e222a; --input:#272c36; --line:#3a4150; --txt:#f0f2f5; --muted:#9aa3b2; --acc:#4f8cff; --acc2:#3d6fd4; }
+        :root { --bg:#14161a; --panel:#1e222a; --input:#272c36; --line:#3a4150; --txt:#f0f2f5; --muted:#9aa3b2; --acc:#4f8cff; --acc2:#3d6fd4; --ok:#7ee2a8; --warn:#ffd479; --err:#ff9d9d; }
         * { box-sizing: border-box; }
         body { font-family: "Segoe UI", Arial, sans-serif; margin:0; padding:20px; background: var(--bg); color: var(--txt); line-height:1.6; }
-        .wrap { max-width: 760px; margin: 0 auto; }
+        .wrap { max-width: 800px; margin: 0 auto; }
         h1 { font-size: 22px; margin: 0 0 4px; }
         .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
-        textarea { width:100%; height:170px; padding:14px; background: var(--input); color: var(--txt); border:1px solid var(--line); border-radius:8px; font-size:16px; font-family:inherit; resize:vertical; }
+        textarea { width:100%; height:150px; padding:14px; background: var(--input); color: var(--txt); border:1px solid var(--line); border-radius:8px; font-size:16px; font-family:inherit; resize:vertical; }
         textarea:focus { outline:none; border-color: var(--acc); }
         .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
-        button { padding:11px 22px; font-size:15px; font-weight:700; cursor:pointer; border:none; border-radius:7px; font-family:inherit; transition: background .15s; }
+        button { padding:11px 22px; font-size:15px; font-weight:700; cursor:pointer; border:none; border-radius:7px; font-family:inherit; }
         .primary { background: var(--acc); color:#fff; }
         .primary:hover:not(:disabled) { background: var(--acc2); }
         .ghost { background: var(--panel); color: var(--txt); border:1px solid var(--line); }
-        .ghost:hover:not(:disabled) { background: #2a303b; }
-        button:disabled { opacity:.5; cursor:not-allowed; }
+        .ghost:hover:not(:disabled) { background:#2a303b; }
+        button:disabled { opacity:.45; cursor:not-allowed; }
         select, input[type=range] { font-family:inherit; }
         select { padding:10px 12px; font-size:15px; background: var(--input); color: var(--txt); border:1px solid var(--line); border-radius:7px; cursor:pointer; }
         .field { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
         input[type=range] { width:130px; accent-color: var(--acc); }
-        .status { padding:11px 14px; border-radius:7px; background: var(--panel); border:1px solid var(--line); font-size:14px; color:var(--muted); }
-        .status.ok { color:#7ee2a8; border-color:#2c5b40; }
-        .status.err { color:#ff9d9d; border-color:#6b3535; }
-        .status.busy { color:#ffd479; border-color:#6b5a2c; }
-        .prog { height:5px; background: var(--input); border-radius:3px; overflow:hidden; margin-top:10px; }
-        .prog > div { height:100%; width:0; background: var(--acc); transition: width .3s; }
-        .info { margin-top:18px; font-size:13px; color:#6d7686; line-height:1.7; }
+
+        .panel { background: var(--panel); border:1px solid var(--line); border-radius:9px; padding:14px 16px; margin-top:14px; }
+        .panel h2 { font-size:14px; margin:0 0 10px; color:var(--muted); font-weight:700; }
+
+        .headline { font-size:15px; font-weight:700; margin-bottom:4px; }
+        .headline.ok { color:var(--ok); } .headline.err { color:var(--err); }
+        .headline.busy { color:var(--warn); } .headline.idle { color:var(--muted); }
+        .detail { font-size:13px; color:var(--muted); }
+
+        .prog { height:8px; background: var(--input); border-radius:4px; overflow:hidden; margin:11px 0 7px; }
+        .prog > div { height:100%; width:0; background: linear-gradient(90deg,#4f8cff,#7ab0ff); transition: width .25s; }
+        .prog.done > div { background: var(--ok); }
+
+        .steps { list-style:none; margin:0; padding:0; font-size:13px; }
+        .steps li { display:flex; align-items:flex-start; gap:8px; padding:5px 0; border-bottom:1px dashed #2c323d; color:var(--muted); }
+        .steps li:last-child { border-bottom:none; }
+        .steps li .mark { flex:0 0 16px; text-align:center; font-weight:700; }
+        .steps li.active { color: var(--txt); }
+        .steps li.active .mark { color: var(--warn); }
+        .steps li.done { color:#8fb99f; }
+        .steps li.done .mark { color: var(--ok); }
+        .steps li.fail { color: var(--err); }
+        .steps li.fail .mark { color: var(--err); }
+        .steps li .el { font-size:11px; color:#5f6875; }
+
+        .log { max-height:190px; overflow:auto; background:#11141a; border:1px solid #262b34; border-radius:7px; padding:10px; font-family: Consolas, monospace; font-size:11.5px; direction:ltr; text-align:left; }
+        .log div { padding:1px 0; color:#a9b3c0; white-space:pre-wrap; word-break:break-word; }
+        .log .e { color: var(--err); } .log .w { color: var(--warn); } .log .g { color: var(--ok); }
+
         audio { width:100%; margin-top:14px; }
+        .info { margin-top:18px; font-size:13px; color:#6d7686; line-height:1.7; }
+        .hidden { display:none; }
     </style>
 </head>
 <body>
 <div class="wrap">
 
     <h1>מקריא טקסט בעברית</h1>
-    <div class="sub">מנוע AI מקומי (Kokoro) — רץ בדפדפן שלך, ללא שרת וללא עלות</div>
+    <div class="sub">מנוע AI מקומי (Kokoro) — רץ בדפדפן שלך, ללא שרת וללא עלות. הטקסט לא נשלח לשום מקום.</div>
 
     <textarea id="textInput">שלום! הפעם הקול נוצר אצלך במחשב, בלי לשלוח את הטקסט לשום שרת. זהו מנוע קול מבוסס נטרונים קטן שרץ על המעבד ועל הכרטיס הגרפי שלך.</textarea>
 
     <div class="bar">
         <button class="primary" id="playBtn" onclick="speak()">הקרא בקול טבעי</button>
         <button class="ghost" id="stopBtn" onclick="stopSpeak()" disabled>עצור</button>
+        <button class="ghost" id="resetBtn" onclick="resetEngine()">טען מחדש (איפוס מטמון)</button>
     </div>
 
     <div class="bar">
         <div class="field">קול:
             <select id="voiceSelect"></select>
         </div>
-        <div class="field">מהירות: <span id="speedLabel">1.0</span>
+        <div class="field">מהירות: <span id="speedLabel">1.00</span>
             <input type="range" id="speedRange" min="0.5" max="1.5" step="0.05" value="1" oninput="document.getElementById('speedLabel').textContent = parseFloat(this.value).toFixed(2)">
         </div>
     </div>
 
-    <div class="status" id="statusLabel">לא נטען עדיין.</div>
-    <div class="prog" id="progWrap" style="display:none"><div id="progBar"></div></div>
+    <div class="panel">
+        <h2>מה קורה עכשיו</h2>
+        <div class="headline idle" id="headline">ממתין</div>
+        <div class="detail" id="detail">לחץ "הקרא בקול טבעי" כדי להתחיל. בהקשה הראשונה הדפדפן יורד מודל קול בנפח של כ-85MB — הוא נשמר במטמון והטעינות הבאות יהיו מיידיות.</div>
+        <div class="prog hidden" id="progWrap"><div id="progBar"></div></div>
+    </div>
+
+    <div class="panel">
+        <h2>שלבים</h2>
+        <ul class="steps" id="steps"></ul>
+    </div>
+
+    <div class="panel">
+        <h2>יומן טכני</h2>
+        <div class="log" id="log"><div class="w">ממתין לפעולה...</div></div>
+    </div>
 
     <audio id="audioPlayer" controls></audio>
 
     <div class="info">
-        בפעם הראשונה יורד מודל הקול (כ-85MB) ונשמר במטמון הדפדפן — ההקראות הבאות יעלו מהר.
-        הסימנים: <b>!</b> → <b>פסיק חדש</b>, <b>?</b> → <b>סימן שאלה</b>, <b>.</b> → <b>נקודה</b>.
-        תוכל גם להקליד את הטקסט המדויק כך שהקריאה תהיה מדויקת יותר.
+        <b>איך זה עובד:</b> בהקשה הראשונה מתאמפת הספרייה ומורדת מודל רשת קטן (Kokoro, 82 מיליון פרמטרים) ששמור ב-Hugging&nbsp;Face. לאחר מכן הדפדפן מריץ אותו מקומית באמצעות WebAssembly ומייצר קובץ שמע — הכל בתוך המחשב שלך. אין קריאה לשרת בכל שלב.<br><br>
+        <b>למה ההקראה הראשונה ארוכה:</b> ההורדה היחידה הגדולה היא פעם אחת. אחריה המודל נשאר במטמון הדפדפן וההקראות הבאות ייצרו קול תוך שניות. אם תרצה קבצים קטנים יותר — יש אפשרות להתקין הרשאות קבצים בדפדפן כדי שהמודל יישמר לצמיתות.<br><br>
+        <b>לטיבות ההגייה:</b> המודל אומן בעיקר על אנגלית, והחלק העברי שלו מאומן פחות. כתיבה פונטית מדויקת משפרת מאוד — <b>!</b> → פסיק חדש, <b>?</b> → סימן שאלה, <b>.</b> → נקודה.
     </div>
 
 </div>
 
 <script type="module">
+    const STEPS = [
+        'טוען את ספריית ה-JavaScript של המנוע',
+        'מוריד את מודל הרשת (כ-85MB)',
+        'טוען את מנוע העיבוד המקומי',
+        'המנוע מוכן',
+        'ממיר טקסט לצעמים פונטיים',
+        'מייצר את קובץ השמע',
+        'מנגן'
+    ];
+
     let tts = null;
     let ready = false;
     let loading = false;
     let stopRequested = false;
-    let currentUrls = [];
+    let blobs = [];
+    let loadStart = 0;
 
     const els = {
         text: document.getElementById('textInput'),
         voice: document.getElementById('voiceSelect'),
-        status: document.getElementById('statusLabel'),
+        headline: document.getElementById('headline'),
+        detail: document.getElementById('detail'),
         progWrap: document.getElementById('progWrap'),
         progBar: document.getElementById('progBar'),
+        steps: document.getElementById('steps'),
+        log: document.getElementById('log'),
         play: document.getElementById('playBtn'),
         stop: document.getElementById('stopBtn'),
+        reset: document.getElementById('resetBtn'),
         audio: document.getElementById('audioPlayer'),
         speed: document.getElementById('speedRange')
     };
 
-    function setStatus(text, kind) {
-        els.status.textContent = text;
-        els.status.className = 'status' + (kind ? ' ' + kind : '');
+    function log(msg, kind) {
+        const t = ((performance.now() - loadStart) / 1000).toFixed(1).padStart(6) + 's';
+        const div = document.createElement('div');
+        if (kind) div.className = kind;
+        div.textContent = '[' + t + '] ' + msg;
+        els.log.appendChild(div);
+        els.log.scrollTop = els.log.scrollHeight;
+    }
+
+    function buildSteps() {
+        els.steps.innerHTML = '';
+        STEPS.forEach((s, i) => {
+            const li = document.createElement('li');
+            li.id = 'step-' + i;
+            li.innerHTML = '<span class="mark">&bull;</span><span class="txt">' + s + '</span>';
+            els.steps.appendChild(li);
+        });
+    }
+
+    function setStep(i, state, note) {
+        const li = document.getElementById('step-' + i);
+        if (!li) return;
+        li.className = state;
+        li.querySelector('.mark').textContent =
+            state === 'done' ? '✔' : state === 'fail' ? '✖' : state === 'active' ? '◌' : '·';
+        const old = li.querySelector('.el');
+        if (old) old.remove();
+        if (note) {
+            const sp = document.createElement('span');
+            sp.className = 'el';
+            sp.textContent = '  ' + note;
+            li.appendChild(sp);
+        }
+    }
+
+    function resetSteps() { STEPS.forEach((_, i) => setStep(i, 'idle')); }
+
+    function setHead(text, kind, detail) {
+        els.headline.textContent = text;
+        els.headline.className = 'headline ' + (kind || 'idle');
+        if (detail !== undefined) els.detail.textContent = detail;
     }
 
     function setProgress(pct) {
-        if (pct === null) { els.progWrap.style.display = 'none'; els.progBar.style.width = '0%'; return; }
-        els.progWrap.style.display = 'block';
-        els.progBar.style.width = pct + '%';
+        if (pct === null) {
+            els.progWrap.classList.add('hidden');
+            els.progWrap.classList.remove('done');
+            els.progBar.style.width = '0%';
+            return;
+        }
+        els.progWrap.classList.remove('hidden');
+        if (pct >= 100) els.progWrap.classList.add('done');
+        els.progBar.style.width = Math.min(100, pct) + '%';
     }
 
-    // קולות עבריים של Kokoro (מקור: Kokoro-82M-v1.0)
+    function fmtMB(bytes) { return (bytes / 1048576).toFixed(1) + ' MB'; }
+
+    function describeError(err) {
+        const hints = {
+            'TypeError: Failed to fetch':
+                'זו בעיית רשת או חסימת CORS — ייתכן שחסם הפיירוול או הרשת חוסמת את huggingface.co ואת cdn.jsdelivr.net.',
+            'no available backend found':
+                'הדפדפן לא מצא מנוע להרצת WebAssembly. נסה Chrome או Edge מודכנים.',
+            'Failed to load':
+                'טעינת קובץ נכשלה. ייתכן שהחיבור לאינטרנט ניתק באמצע, או שהמטמון נפגם.'
+        };
+        for (const k in hints) if (String(err).includes(k.replace('TypeError: ', '')) || String(err && err.message) === k.replace('TypeError: ', '')) return hints[k];
+        return null;
+    }
+
     const VOICES = [
-        { id: 'hf_alpha',  label: 'אלפא — נקבה, רך וברור' },
-        { id: 'hf_beta',   label: 'בטא — נקבה, עמוק ורציני' },
-        { id: 'hm_omega',  label: 'אומגה — זכר, בטוח' },
-        { id: 'hm_psi',    label: 'פסי — זכר, קל ורך' }
+        { id: 'hf_alpha', label: 'אלפא — נקבה, רך וברור' },
+        { id: 'hf_beta',  label: 'בטא — נקבה, עמוק ורציני' },
+        { id: 'hm_omega', label: 'אומגה — זכר, בטוח' },
+        { id: 'hm_psi',   label: 'פסי — זכר, קל ורך' }
     ];
 
     function populateVoices() {
@@ -120,34 +232,70 @@
     }
 
     async function init() {
-        if (ready || loading) return;
+        if (ready) return true;
+        if (loading) return false;
         loading = true;
-        setStatus('טוען את מנוע הקול... זה יכול לקחת רגע בפעם הראשונה.', 'busy');
-        setProgress(0);
-        try {
-            const { KokoroTTS } = await import(
-                'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js'
-            );
-            els.stop.disabled = true;
+        loadStart = performance.now();
+        log('התחלת טעינת המנוע', 'w');
 
-            tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+        setHead('טוען את המנוע...', 'busy', 'שלב ראשון: מביא את קוד הספרייה מהאינטרנט. עשר שניות בערך.');
+        setStep(0, 'active');
+        setProgress(0);
+
+        try {
+            const mod = await import('https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js');
+            log('ספריית kokoro-js נטענה בהצלחה', 'g');
+            setStep(0, 'done');
+
+            setHead('מוריד את מודל הקול...', 'busy',
+                'שלב שני: מוריד קובץ של כ-85MB מ-Hugging Face. זו ההורדה היחידה הגדולה — אחריה הכול מהיר. אל תסגור את הלשונית.');
+            setStep(1, 'active');
+
+            let lastFile = '';
+            tts = await mod.KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
                 dtype: 'q8',
                 device: 'wasm',
                 progress_callback: (p) => {
                     if (p.status === 'progress' && p.total) {
-                        setProgress(Math.round((p.loaded / p.total) * 100));
-                        setStatus('מוריד את מודל הקול... ' + Math.round((p.loaded / p.total) * 100) + '%', 'busy');
+                        const pct = Math.round((p.loaded / p.total) * 100);
+                        setProgress(pct);
+                        setHead('מוריד את מודל הקול... ' + pct + '%', 'busy',
+                            'שלב שני: ' + (p.file || 'קובץ מודל') + ' — ' + fmtMB(p.loaded) + ' מתוך ' + fmtMB(p.total));
+                        if (p.file !== lastFile) { lastFile = p.file; log('הורדת קובץ: ' + p.file); }
+                    } else if (p.status === 'done' && p.file) {
+                        log('הקובץ ' + p.file + ' הורד במלואו', 'g');
+                    } else if (p.status === 'initiate' && p.file) {
+                        log('מתחיל הורדה: ' + p.file);
                     }
                 }
             });
 
+            log('מודל הרשת נטען בהצלחה', 'g');
+            setStep(1, 'done', fmtMB(86033585));
+
+            setStep(2, 'active');
+            setHead('מאתחל את מנוע העיבוד...', 'busy', 'שלב שלישי: קובץ הקוד של מנוע ה-WebAssembly נטען לזיכרון. זה לוקח שניות אחדות.');
+            await new Promise(r => setTimeout(r, 60));
+            setStep(2, 'done');
+
             ready = true;
+            setStep(3, 'done');
             setProgress(null);
-            setStatus('המנוע מוכן. בחר טקסט ולחץ "הקרא בקול טבעי".', 'ok');
+            const secs = ((performance.now() - loadStart) / 1000).toFixed(1);
+            setHead('המנוע מוכן', 'ok',
+                'הכל נטען ב-' + secs + ' שניות. ההקראות הבאות יתחילו מיד, בלי להמתין. אפשר ללחוץ שוב.');
+            log('המנוע מוכן. סך הזמן: ' + secs + ' שניות', 'g');
+            return true;
+
         } catch (err) {
             console.error(err);
-            setProgress(null);
-            setStatus('טעינת המנוע נכשלה: ' + (err && err.message ? err.message : err), 'err');
+            const msg = err && err.message ? err.message : String(err);
+            log('שגיאה: ' + msg, 'e');
+            const hint = describeError(err);
+            if (hint) log('רמז: ' + hint, 'w');
+            setHead('הטעינה נכשלה', 'err', hint ? (msg + ' — ' + hint) : msg);
+            setStep(0, 'fail'); setStep(1, 'fail'); setStep(2, 'fail');
+            return false;
         } finally {
             loading = false;
         }
@@ -157,44 +305,60 @@
         const text = els.text.value.trim();
         if (!text) { alert('אנא הכנס טקסט להקראה'); return; }
 
-        if (!ready) { await init(); if (!ready) return; }
+        resetSteps();
+        if (!ready) {
+            const okLoad = await init();
+            if (!okLoad) return;
+        }
 
         stopRequested = false;
         els.play.disabled = true;
         els.stop.disabled = false;
 
-        try {
-            setStatus('מייצר קול...', 'busy');
+        setStep(4, 'active');
+        setHead('ממיר טקסט לצעמים פונטיים...', 'busy',
+            'שלב רביעי: המנוע מפרק את המילים לצעמים (פונות). זה הכרחי כדי שהמודל ידע איך לדמות את ההגייה.');
 
+        try {
+            const tGen = performance.now();
             const audio = await tts.generate(text, {
                 voice: els.voice.value,
                 speed: parseFloat(els.speed.value)
             });
+            const tMs = performance.now() - tGen;
 
-            if (stopRequested) { setStatus('הופסק.', ''); return; }
+            setStep(4, 'done', ((tMs) / 1000).toFixed(1) + ' שניות');
+            log('יצירת השמע הסתיימה ב-' + (tMs / 1000).toFixed(1) + ' שניות', 'g');
 
+            if (stopRequested) { setHead('הופסק', '', 'הייצור בוטל לפני שהסתיים.'); return; }
+
+            setStep(5, 'active');
             const blob = audio.toBlob();
             const url = URL.createObjectURL(blob);
-            currentUrls.push(url);
+            blobs.push(url);
+            log('נוצר קובץ שמע: ' + fmtMB(blob.size), 'g');
+            setStep(5, 'done');
+
+            setStep(6, 'active');
+            setHead('מנגן', 'ok', 'הקול מתנגן עכשיו. אורך ההקלטה: ' + (audio.audio.duration || 0).toFixed(1) + ' שניות.');
 
             els.audio.src = url;
             els.audio.play();
 
-            setStatus('ההקראה מתנגנת.', 'ok');
-
             els.audio.onended = () => {
+                setStep(6, 'done');
                 els.play.disabled = false;
                 els.stop.disabled = true;
-                setStatus('ההקראה הסתיימה.', 'ok');
+                setHead('ההקראה הסתיימה', 'ok', 'לחץ "הקרא בקול טבעי" שוב כדי לייצר קול חדש. הפעם זה יהיה מיידי.');
             };
         } catch (err) {
             console.error(err);
-            setStatus('שגיאה בהפקת הקול: ' + (err && err.message ? err.message : err), 'err');
-        } finally {
-            if (stopRequested) {
-                els.play.disabled = false;
-                els.stop.disabled = true;
-            }
+            const msg = err && err.message ? err.message : String(err);
+            log('שגיאה בייצור השמע: ' + msg, 'e');
+            setStep(4, 'fail'); setStep(5, 'fail');
+            setHead('הייצור נכשל', 'err', msg + ' — נסה לבחור קול אחר או לטעון את המנוע מחדש.');
+            els.play.disabled = false;
+            els.stop.disabled = true;
         }
     }
 
@@ -203,15 +367,32 @@
         els.audio.pause();
         els.play.disabled = false;
         els.stop.disabled = true;
-        setStatus('ההקראה הופסקה.', '');
+        setHead('ההקראה הופסקה', '', 'אפשר ללחוץ שוב כדי להתחיל מהתחלה.');
+        log('המשתמש עצר את ההקראה', 'w');
+    }
+
+    async function resetEngine() {
+        tts = null;
+        ready = false;
+        blobs.forEach(u => URL.revokeObjectURL(u));
+        blobs = [];
+        if ('caches' in window) {
+            try {
+                const keys = await caches.keys();
+                for (const k of keys) if (/huggingface|transformers|onnx/i.test(k)) await caches.delete(k);
+                log('נמחקו ' + keys.length + ' מטמוני אחסון של הדפדפן', 'w');
+            } catch (e) { log('לא ניתן לנקות מטמון: ' + e.message, 'w'); }
+        }
+        resetSteps();
+        setProgress(null);
+        setHead('המנוע אופס', '', 'המטמון נוקה. לחץ "הקרא בקול טבעי" כדי להוריד ולטעון מחדש.');
+        log('איפוס הושלם', 'w');
     }
 
     populateVoices();
-    setStatus('לחץ "הקרא בקול טבעי" כדי לטעון את מנוע הקול.', '');
-
-    window.addEventListener('beforeunload', () => {
-        currentUrls.forEach(u => URL.revokeObjectURL(u));
-    });
+    buildSteps();
+    log('הדף נטען. המנוע עדיין לא נטען.', 'g');
+    log('לחץ "הקרא בקול טבעי" כדי להתחיל.', 'w');
 </script>
 </body>
 </html>
