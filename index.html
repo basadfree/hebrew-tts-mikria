@@ -3,233 +3,215 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <!-- חובה: גוגל מחזירה 404 כאשר בקשת השמע נשלחת עם כותרת Referer של הדף -->
     <meta name="referrer" content="no-referrer">
-    <title>מקריא טקסט בעברית איכותית</title>
+    <title>מקריא טקסט בעברית - קול AI טבעי</title>
     <style>
-        body { font-family: sans-serif; padding: 20px; background: #222; color: #fff; text-align: center; }
-        textarea { width: 100%; max-width: 600px; height: 150px; margin: 0 auto 15px; font-size: 16px; padding: 10px; background: #333; color: #fff; border: 1px solid #555; border-radius: 4px; display: block; font-family: inherit; }
-        button { padding: 12px 24px; font-size: 16px; cursor: pointer; background: #0078d4; color: white; border: none; border-radius: 4px; font-weight: bold; margin: 0 4px; }
-        button:hover { background: #005a9e; }
-        button:disabled { background: #555; cursor: not-allowed; }
-        .status { margin-top: 12px; color: #aaa; font-size: 14px; }
-        .row { margin-top: 10px; }
-        input[type=range] { width: 140px; vertical-align: middle; }
-        .hint { margin-top: 18px; color: #777; font-size: 13px; }
+        :root { --bg:#14161a; --panel:#1e222a; --input:#272c36; --line:#3a4150; --txt:#f0f2f5; --muted:#9aa3b2; --acc:#4f8cff; --acc2:#3d6fd4; }
+        * { box-sizing: border-box; }
+        body { font-family: "Segoe UI", Arial, sans-serif; margin:0; padding:20px; background: var(--bg); color: var(--txt); line-height:1.6; }
+        .wrap { max-width: 760px; margin: 0 auto; }
+        h1 { font-size: 22px; margin: 0 0 4px; }
+        .sub { color: var(--muted); font-size: 14px; margin-bottom: 20px; }
+        textarea { width:100%; height:170px; padding:14px; background: var(--input); color: var(--txt); border:1px solid var(--line); border-radius:8px; font-size:16px; font-family:inherit; resize:vertical; }
+        textarea:focus { outline:none; border-color: var(--acc); }
+        .bar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin:14px 0; }
+        button { padding:11px 22px; font-size:15px; font-weight:700; cursor:pointer; border:none; border-radius:7px; font-family:inherit; transition: background .15s; }
+        .primary { background: var(--acc); color:#fff; }
+        .primary:hover:not(:disabled) { background: var(--acc2); }
+        .ghost { background: var(--panel); color: var(--txt); border:1px solid var(--line); }
+        .ghost:hover:not(:disabled) { background: #2a303b; }
+        button:disabled { opacity:.5; cursor:not-allowed; }
+        select, input[type=range] { font-family:inherit; }
+        select { padding:10px 12px; font-size:15px; background: var(--input); color: var(--txt); border:1px solid var(--line); border-radius:7px; cursor:pointer; }
+        .field { display:flex; align-items:center; gap:8px; font-size:14px; color:var(--muted); }
+        input[type=range] { width:130px; accent-color: var(--acc); }
+        .status { padding:11px 14px; border-radius:7px; background: var(--panel); border:1px solid var(--line); font-size:14px; color:var(--muted); }
+        .status.ok { color:#7ee2a8; border-color:#2c5b40; }
+        .status.err { color:#ff9d9d; border-color:#6b3535; }
+        .status.busy { color:#ffd479; border-color:#6b5a2c; }
+        .prog { height:5px; background: var(--input); border-radius:3px; overflow:hidden; margin-top:10px; }
+        .prog > div { height:100%; width:0; background: var(--acc); transition: width .3s; }
+        .info { margin-top:18px; font-size:13px; color:#6d7686; line-height:1.7; }
+        audio { width:100%; margin-top:14px; }
     </style>
 </head>
 <body>
+<div class="wrap">
 
-    <h2>הקראת טקסט בעברית בקול טבעי (ללא הגבלה)</h2>
+    <h1>מקריא טקסט בעברית</h1>
+    <div class="sub">מנוע AI מקומי (Kokoro) — רץ בדפדפן שלך, ללא שרת וללא עלות</div>
 
-    <textarea id="textInput">שלום! הקוד הנוכחי משתמש כעת במנוע השמע הרשמי והאיכותי של גוגל. בצורה הזו, הקול יישמע טבעי וברור לחלוטין בכל דפדפן, ללא תלות בקול הרובוטי הישן של המחשב.</textarea>
+    <textarea id="textInput">שלום! הפעם הקול נוצר אצלך במחשב, בלי לשלוח את הטקסט לשום שרת. זהו מנוע קול מבוסס נטרונים קטן שרץ על המעבד ועל הכרטיס הגרפי שלך.</textarea>
 
-    <div class="row">
-        <button id="playBtn" onclick="toggleSpeak()">הקרא טקסט בקול טבעי</button>
-        <button id="stopBtn" onclick="stopSpeak()">עצור</button>
+    <div class="bar">
+        <button class="primary" id="playBtn" onclick="speak()">הקרא בקול טבעי</button>
+        <button class="ghost" id="stopBtn" onclick="stopSpeak()" disabled>עצור</button>
     </div>
 
-    <div class="row">
-        <label>מהירות: <span id="speedLabel">1.0</span></label><br>
-        <input type="range" id="speedRange" min="0.5" max="1.5" step="0.1" value="1" oninput="document.getElementById('speedLabel').textContent = parseFloat(this.value).toFixed(1)">
+    <div class="bar">
+        <div class="field">קול:
+            <select id="voiceSelect"></select>
+        </div>
+        <div class="field">מהירות: <span id="speedLabel">1.0</span>
+            <input type="range" id="speedRange" min="0.5" max="1.5" step="0.05" value="1" oninput="document.getElementById('speedLabel').textContent = parseFloat(this.value).toFixed(2)">
+        </div>
     </div>
 
-    <div id="statusLabel" class="status"></div>
+    <div class="status" id="statusLabel">לא נטען עדיין.</div>
+    <div class="prog" id="progWrap" style="display:none"><div id="progBar"></div></div>
 
-    <div class="hint">ההקראה מבוצעת ממנוע השמע של Google Translate — נדרש חיבור לאינטרנט. אם הוא לא זמין, הדף עובר אוטומטית לקול המקומי של המכשיר.</div>
+    <audio id="audioPlayer" controls></audio>
 
-    <audio id="audioPlayer" style="display:none;"></audio>
+    <div class="info">
+        בפעם הראשונה יורד מודל הקול (כ-85MB) ונשמר במטמון הדפדפן — ההקראות הבאות יעלו מהר.
+        הסימנים: <b>!</b> → <b>פסיק חדש</b>, <b>?</b> → <b>סימן שאלה</b>, <b>.</b> → <b>נקודה</b>.
+        תוכל גם להקליד את הטקסט המדויק כך שהקריאה תהיה מדויקת יותר.
+    </div>
 
-    <script>
-        const MAX_CHARS = 190;
-        const audioPlayer = document.getElementById('audioPlayer');
-        const statusLabel = document.getElementById('statusLabel');
-        const playBtn = document.getElementById('playBtn');
-        const stopBtn = document.getElementById('stopBtn');
+</div>
 
-        let chunks = [];
-        let currentIndex = 0;
-        let isPlaying = false;
+<script type="module">
+    let tts = null;
+    let ready = false;
+    let loading = false;
+    let stopRequested = false;
+    let currentUrls = [];
 
-        function splitText(text) {
-            text = text.replace(/\s+/g, ' ').trim();
-            if (text.length <= MAX_CHARS) return [text];
+    const els = {
+        text: document.getElementById('textInput'),
+        voice: document.getElementById('voiceSelect'),
+        status: document.getElementById('statusLabel'),
+        progWrap: document.getElementById('progWrap'),
+        progBar: document.getElementById('progBar'),
+        play: document.getElementById('playBtn'),
+        stop: document.getElementById('stopBtn'),
+        audio: document.getElementById('audioPlayer'),
+        speed: document.getElementById('speedRange')
+    };
 
-            const parts = text.split(/(?<=[.!?։؟…])\s+/);
-            const result = [];
-            let buffer = '';
+    function setStatus(text, kind) {
+        els.status.textContent = text;
+        els.status.className = 'status' + (kind ? ' ' + kind : '');
+    }
 
-            for (const part of parts) {
-                if ((buffer + ' ' + part).trim().length <= MAX_CHARS) {
-                    buffer = (buffer ? buffer + ' ' : '') + part;
-                    continue;
-                }
-                if (buffer) result.push(buffer);
-                if (part.length <= MAX_CHARS) {
-                    buffer = part;
-                } else {
-                    const words = part.split(' ');
-                    buffer = '';
-                    for (const word of words) {
-                        if ((buffer ? buffer + ' ' : '') + word > MAX_CHARS) {
-                            if (buffer) result.push(buffer);
-                            buffer = word;
-                        } else {
-                            buffer = (buffer ? buffer + ' ' : '') + word;
-                        }
+    function setProgress(pct) {
+        if (pct === null) { els.progWrap.style.display = 'none'; els.progBar.style.width = '0%'; return; }
+        els.progWrap.style.display = 'block';
+        els.progBar.style.width = pct + '%';
+    }
+
+    // קולות עבריים של Kokoro (מקור: Kokoro-82M-v1.0)
+    const VOICES = [
+        { id: 'hf_alpha',  label: 'אלפא — נקבה, רך וברור' },
+        { id: 'hf_beta',   label: 'בטא — נקבה, עמוק ורציני' },
+        { id: 'hm_omega',  label: 'אומגה — זכר, בטוח' },
+        { id: 'hm_psi',    label: 'פסי — זכר, קל ורך' }
+    ];
+
+    function populateVoices() {
+        els.voice.innerHTML = '';
+        for (const v of VOICES) {
+            const o = document.createElement('option');
+            o.value = v.id;
+            o.textContent = v.label;
+            els.voice.appendChild(o);
+        }
+        els.voice.value = 'hf_alpha';
+    }
+
+    async function init() {
+        if (ready || loading) return;
+        loading = true;
+        setStatus('טוען את מנוע הקול... זה יכול לקחת רגע בפעם הראשונה.', 'busy');
+        setProgress(0);
+        try {
+            const { KokoroTTS } = await import(
+                'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js'
+            );
+            els.stop.disabled = true;
+
+            tts = await KokoroTTS.from_pretrained('onnx-community/Kokoro-82M-v1.0-ONNX', {
+                dtype: 'q8',
+                device: 'wasm',
+                progress_callback: (p) => {
+                    if (p.status === 'progress' && p.total) {
+                        setProgress(Math.round((p.loaded / p.total) * 100));
+                        setStatus('מוריד את מודל הקול... ' + Math.round((p.loaded / p.total) * 100) + '%', 'busy');
                     }
                 }
-            }
-            if (buffer) result.push(buffer);
-            return result;
+            });
+
+            ready = true;
+            setProgress(null);
+            setStatus('המנוע מוכן. בחר טקסט ולחץ "הקרא בקול טבעי".', 'ok');
+        } catch (err) {
+            console.error(err);
+            setProgress(null);
+            setStatus('טעינת המנוע נכשלה: ' + (err && err.message ? err.message : err), 'err');
+        } finally {
+            loading = false;
         }
+    }
 
-        const CLIENTS = ['gtx', 'tw-ob', 'dict-chrome-ex', 'gtx-full', 'gwt-client'];
+    async function speak() {
+        const text = els.text.value.trim();
+        if (!text) { alert('אנא הכנס טקסט להקראה'); return; }
 
-        function buildUrl(text, client) {
-            const speed = parseFloat(document.getElementById('speedRange').value).toFixed(1);
-            const base = 'https://translate.google.com/translate_tts'
-                + '?ie=UTF-8'
-                + '&tl=iw'
-                + '&q=' + encodeURIComponent(text)
-                + '&ttsspeed=' + speed;
-            if (client === 'gtx-full') return base + '&client=gtx&total=1&idx=0&textlen=' + text.length;
-            return base + '&client=' + client;
-        }
+        if (!ready) { await init(); if (!ready) return; }
 
-        function delay(ms) {
-            return new Promise(resolve => setTimeout(resolve, ms));
-        }
+        stopRequested = false;
+        els.play.disabled = true;
+        els.stop.disabled = false;
 
-        function resetBtn() {
-            isPlaying = false;
-            playBtn.textContent = 'הקרא טקסט בקול טבעי';
-        }
+        try {
+            setStatus('מייצר קול...', 'busy');
 
-        function fallbackLocal() {
-            if (!('speechSynthesis' in window)) {
-                statusLabel.textContent = 'שגיאה: לא ניתן להפעיל את מנוע השמע.';
-                return;
-            }
-            const u = new SpeechSynthesisUtterance(document.getElementById('textInput').value);
-            const rate = parseFloat(document.getElementById('speedRange').value);
-            u.lang = 'he-IL';
-            u.rate = rate;
-            window.speechSynthesis.cancel();
-            window.speechSynthesis.speak(u);
-            statusLabel.textContent = 'מנוע גוגל לא זמין — מנגן בקול מקומי.';
-        }
+            const audio = await tts.generate(text, {
+                voice: els.voice.value,
+                speed: parseFloat(els.speed.value)
+            });
 
-        async function fetchAudio(text) {
-            let lastErr = null;
-            for (const client of CLIENTS) {
-                for (let attempt = 0; attempt < 2; attempt++) {
-                    try {
-                        const res = await fetch(buildUrl(text, client), { referrerPolicy: 'no-referrer' });
-                        if (res.status === 429) {
-                            lastErr = new Error('rate limited (429)');
-                            await delay(1200 + attempt * 1500);
-                            continue;
-                        }
-                        if (!res.ok) { lastErr = new Error('HTTP ' + res.status); break; }
-                        const buf = await res.arrayBuffer();
-                        if (buf.byteLength > 0) return buf;
-                        lastErr = new Error('תשובה ריקה');
-                        break;
-                    } catch (e) {
-                        lastErr = e;
-                        await delay(800);
-                    }
-                }
-            }
-            throw lastErr || new Error('בקשה נכשלה');
-        }
+            if (stopRequested) { setStatus('הופסק.', ''); return; }
 
-        async function playCurrentChunk() {
-            if (!isPlaying) return;
-            if (currentIndex >= chunks.length) {
-                resetBtn();
-                statusLabel.textContent = 'ההקראה הסתיימה.';
-                return;
-            }
+            const blob = audio.toBlob();
+            const url = URL.createObjectURL(blob);
+            currentUrls.push(url);
 
-            const isLast = currentIndex === chunks.length - 1;
-            const indexAtStart = currentIndex;
-            statusLabel.textContent = 'מכין את השמע... (' + (currentIndex + 1) + '/' + chunks.length + ')';
+            els.audio.src = url;
+            els.audio.play();
 
-            let buf;
-            try {
-                buf = await fetchAudio(chunks[currentIndex]);
-            } catch (err) {
-                console.error('TTS fetch failed:', err);
-                if (indexAtStart === 0) {
-                    resetBtn();
-                    fallbackLocal();
-                } else {
-                    resetBtn();
-                    statusLabel.textContent = 'ההקראה נעצרה באמצע בגלל שגיאת רשת.';
-                }
-                return;
-            }
+            setStatus('ההקראה מתנגנת.', 'ok');
 
-            if (!isPlaying) return;
-
-            const isLastNow = currentIndex === chunks.length - 1;
-            statusLabel.textContent = 'מנגן... (' + (currentIndex + 1) + '/' + chunks.length + ')';
-
-            audioPlayer.onended = function () {
-                if (!isPlaying) return;
-                if (isLastNow) {
-                    resetBtn();
-                    statusLabel.textContent = 'ההקראה הסתיימה.';
-                } else {
-                    currentIndex++;
-                    playCurrentChunk();
-                }
+            els.audio.onended = () => {
+                els.play.disabled = false;
+                els.stop.disabled = true;
+                setStatus('ההקראה הסתיימה.', 'ok');
             };
-
-            audioPlayer.onerror = function () {
-                if (!isPlaying) return;
-                resetBtn();
-                statusLabel.textContent = 'שגיאה בניגון השמע. נסה שוב.';
-            };
-
-            audioPlayer.src = URL.createObjectURL(new Blob([buf], { type: 'audio/mpeg' }));
-            try {
-                await audioPlayer.play();
-            } catch (err) {
-                console.error('play() failed:', err);
-                resetBtn();
-                statusLabel.textContent = 'שגיאה בניגון השמע. נסה שוב.';
+        } catch (err) {
+            console.error(err);
+            setStatus('שגיאה בהפקת הקול: ' + (err && err.message ? err.message : err), 'err');
+        } finally {
+            if (stopRequested) {
+                els.play.disabled = false;
+                els.stop.disabled = true;
             }
         }
+    }
 
-        function toggleSpeak() {
-            if (isPlaying) { stopSpeak(); return; }
+    function stopSpeak() {
+        stopRequested = true;
+        els.audio.pause();
+        els.play.disabled = false;
+        els.stop.disabled = true;
+        setStatus('ההקראה הופסקה.', '');
+    }
 
-            const text = document.getElementById('textInput').value.trim();
-            if (!text) {
-                alert('אנא הכנס טקסט להקראה');
-                return;
-            }
+    populateVoices();
+    setStatus('לחץ "הקרא בקול טבעי" כדי לטעון את מנוע הקול.', '');
 
-            chunks = splitText(text);
-            currentIndex = 0;
-            isPlaying = true;
-            playBtn.textContent = 'עצור';
-            statusLabel.textContent = 'מכין את השמע...';
-            playCurrentChunk();
-        }
-
-        function stopSpeak() {
-            isPlaying = false;
-            window.speechSynthesis && window.speechSynthesis.cancel();
-            audioPlayer.pause();
-            audioPlayer.removeAttribute('src');
-            audioPlayer.load();
-            resetBtn();
-            statusLabel.textContent = 'ההקראה הופסקה.';
-        }
-    </script>
+    window.addEventListener('beforeunload', () => {
+        currentUrls.forEach(u => URL.revokeObjectURL(u));
+    });
+</script>
 </body>
 </html>
